@@ -1,14 +1,18 @@
 require 'puppet/provider/exec'
-begin
-  require 'ruby-pwsh'
-rescue LoadError
-  raise 'Could not load the "ruby-pwsh" library; is the dependency module puppetlabs-pwshlib installed in this environment?'
-end
 
 Puppet::Type.type(:exec).provide :powershell, :parent => Puppet::Provider::Exec do
   confine :operatingsystem => :windows
+  confine :feature => :pwshlib
 
-  commands :powershell => Pwsh::Manager.powershell_path
+  def self.powershell_path
+    begin
+      require 'ruby-pwsh'
+      Pwsh::Manager.powershell_path
+    rescue
+      nil
+    end
+  end
+  commands :powershell => self.powershell_path
 
   desc <<-EOT
     Executes Powershell commands. One of the `onlyif`, `unless`, or `creates`
@@ -45,6 +49,7 @@ Puppet::Type.type(:exec).provide :powershell, :parent => Puppet::Provider::Exec 
   Puppet (including 3.x), or to a Puppet version newer than 3.x and ensure you
   have .NET Framework 3.5 installed.
   UPGRADE
+
 
   def self.upgrade_message
     Puppet.warning POWERSHELL_MODULE_UPGRADE_MSG if !@upgrade_warning_issued
